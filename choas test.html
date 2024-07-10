@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Lorenz System</title>
+  <style>
+    body { margin: 0; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    // Import necessary libraries
+    import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.126.1/examples/jsm/controls/OrbitControls.js';
+
+    // Set up the scene, camera, and renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Add orbit controls for camera movement
+    const controls = new OrbitControls(camera, renderer.domElement);
+
+    // Set up the Lorenz system parameters
+    const sigma = 10;
+    const beta = 8/3;
+    const rho = 28;
+
+    // Set up the initial conditions and step size
+    let x = 0.1;
+    let y = 0.1;
+    let z = 0.1;
+    const dt = 0.01;
+
+    // Function to calculate the derivative of the Lorenz system
+    function lorenz(x, y, z) {
+      const dx = sigma * (y - x);
+      const dy = x * (rho - z) - y;
+      const dz = x * y - beta * z;
+      return [dx, dy, dz];
+    }
+
+    // Function to perform a single step of the Runge-Kutta method
+    function step(x, y, z, dt) {
+      const k1 = lorenz(x, y, z);
+      const k2 = lorenz(x + 0.5 * dt * k1[0], y + 0.5 * dt * k1[1], z + 0.5 * dt * k1[2]);
+      const k3 = lorenz(x + 0.5 * dt * k2[0], y + 0.5 * dt * k2[1], z + 0.5 * dt * k2[2]);
+      const k4 = lorenz(x + dt * k3[0], y + dt * k3[1], z + dt * k3[2]);
+      x += dt * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]) / 6;
+      y += dt * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]) / 6;
+      z += dt * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2]) / 6;
+      return [x, y, z];
+    }
+
+    // Function to interpolate between red and yellow colors
+    function interpolateColor(t) {
+      const red = [255, 0, 0];
+      const yellow = [255, 255, 0];
+      const color = red.map((c, i) => Math.round(c + (yellow[i] - c) * t));
+      return `#${color.map(c => c.toString(16).padStart(2, '0')).join('')}`;
+    }
+
+    // Function to update the graph
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Perform a step of the Runge-Kutta method
+      const [newX, newY, newZ] = step(x, y, z, dt);
+
+      // Create a new geometry for the new segment
+      const geometry = new THREE.BufferGeometry();
+      const positions = [x, y, z, newX, newY, newZ];
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+      // Calculate the color based on the current time
+      const time = performance.now() * 0.001;
+      const color = interpolateColor(Math.sin(time) * 0.5 + 0.5);
+
+      // Create a line for the new segment with the interpolated color
+      const material = new THREE.LineBasicMaterial({ color });
+      const line = new THREE.Line(geometry, material);
+      scene.add(line);
+
+      // Update the current position
+      x = newX;
+      y = newY;
+      z = newZ;
+
+      // Render the scene
+      renderer.render(scene, camera);
+    }
+
+    // Set up the camera position
+    camera.position.z = 50;
+
+    // Start the animation loop
+    animate();
+  </script>
+</body>
+</html>
